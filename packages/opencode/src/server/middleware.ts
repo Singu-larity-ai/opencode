@@ -5,11 +5,14 @@ import { Session } from "../session"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
 import type { ErrorHandler, MiddlewareHandler } from "hono"
 import { HTTPException } from "hono/http-exception"
+import { getCookie } from "hono/cookie"
 import { Log } from "../util"
 import { Flag } from "@/flag/flag"
 import { basicAuth } from "hono/basic-auth"
 import { cors } from "hono/cors"
 import { compress } from "hono/compress"
+import { isConfigured as authIsConfigured } from "../auth/user/oidc"
+import * as AuthSession from "../auth/user/session"
 
 const log = Log.create({ service: "server" })
 
@@ -89,4 +92,41 @@ export const CompressionMiddleware: MiddlewareHandler = (c, next) => {
   if (path === "/event" || path === "/global/event") return next()
   if (method === "POST" && /\/session\/[^/]+\/(message|prompt_async)$/.test(path)) return next()
   return zipped(c, next)
+}
+
+const AUTH_COOKIE = "singularity_session"
+const AUTH_PATHS = new Set(["/auth/login", "/auth/callback", "/auth/logout", "/auth/me", "/global/health"])
+
+async function hashToken(token: string): Promise<string> {
+  const data = new TextEncoder().encode(token)
+  const hash = await crypto.subtle.digest("SHA-256", data)
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+export const SessionMiddleware: MiddlewareHandler = async (c, next) => {
+  if (!authIsConfigured()) return next()
+  if (AUTH_PATHS.has(c.req.path)) return next()
+  if (c.req.method === "OPTIONS") return next()
+
+  const sessionToken = getCookie(c, AUTH_COOKIE)
+  if (!sessionToken) {
+    return respondAuthRequired(c)
+  }
+
+  const tokenHash = await hashToken(sessionToken)
+  const result = AuthSession.findValidWithUser(tokenHash)
+  if (!result) {
+    return respondAuthRequired(c)
+  }
+
+  c.set("authUser", result.user)
+  return next()
+}
+
+function respondAuthRequired(c: any) {
+  const accepts = c.req.raw.headers.get("accept") || ""
+  if (accepts.includes("text/html")) {
+    return c.redirect("/auth/login")
+  }
+  return c.json({ error: "Authentication required" }, 401)
 }

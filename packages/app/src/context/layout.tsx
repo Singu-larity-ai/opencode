@@ -231,7 +231,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       { ...target, migrate },
       createStore({
         sidebar: {
-          opened: false,
+          opened: true, // Always open
           width: DEFAULT_SIDEBAR_WIDTH,
           workspaces: {} as Record<string, boolean>,
           workspacesDefault: false,
@@ -599,16 +599,10 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
       },
       sidebar: {
-        opened: createMemo(() => store.sidebar.opened),
-        open() {
-          setStore("sidebar", "opened", true)
-        },
-        close() {
-          setStore("sidebar", "opened", false)
-        },
-        toggle() {
-          setStore("sidebar", "opened", (x) => !x)
-        },
+        opened: createMemo(() => true),
+        open() {},
+        close() {},
+        toggle() {},
         width: createMemo(() => store.sidebar.width),
         resize(width: number) {
           setStore("sidebar", "width", width)
@@ -748,7 +742,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       view(sessionKey: string | Accessor<string>) {
         const key = createSessionKeyReader(sessionKey, ensureKey)
         const s = createMemo(() => store.sessionView[key()] ?? { scroll: {} })
-        const terminalOpened = createMemo(() => store.terminal?.opened ?? false)
+        const terminalOpened = createMemo(() => false) // Hidden: always return false
         const reviewPanelOpened = createMemo(() => store.review?.panelOpened ?? true)
 
         function setTerminalOpened(next: boolean) {

@@ -11,6 +11,8 @@ import { ConstrainDragXAxis } from "@/utils/solid-dnd"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { type LocalProject } from "@/context/layout"
+import { useAuth } from "@/context/auth"
+import { usePlatform } from "@/context/platform"
 
 export const SidebarContent = (props: {
   mobile?: boolean
@@ -32,6 +34,8 @@ export const SidebarContent = (props: {
   onOpenHelp: () => void
   renderPanel: () => JSX.Element
 }): JSX.Element => {
+  const platform = usePlatform()
+  const auth = platform.platform === "web" ? useAuth() : null
   const expanded = createMemo(() => !!props.mobile || props.opened())
   const placement = () => (props.mobile ? "bottom" : "right")
   let panel: HTMLDivElement | undefined
@@ -90,6 +94,20 @@ export const SidebarContent = (props: {
           </DragDropProvider>
         </div>
         <div class="shrink-0 w-full pt-3 pb-6 flex flex-col items-center gap-2">
+          <Show when={auth?.isAuthenticated() && auth?.user()}>
+            <Tooltip placement={placement()} value={auth!.user()!.name || auth!.user()!.email || "Account"}>
+              <button
+                type="button"
+                class="w-8 h-8 rounded-full bg-icon-interactive-base text-[#FFF] flex items-center justify-center text-12-medium font-semibold overflow-hidden cursor-pointer"
+                onClick={() => auth!.logout()}
+                aria-label="Sign out"
+              >
+                <Show when={auth!.user()!.avatar_url} fallback={<span>{(auth!.user()!.name || auth!.user()!.email || "?")[0]?.toUpperCase()}</span>}>
+                  <img src={auth!.user()!.avatar_url!} alt="" class="w-full h-full object-cover" />
+                </Show>
+              </button>
+            </Tooltip>
+          </Show>
           <TooltipKeybind placement={placement()} title={props.settingsLabel()} keybind={props.settingsKeybind() ?? ""}>
             <IconButton
               icon="settings-gear"
@@ -99,15 +117,6 @@ export const SidebarContent = (props: {
               aria-label={props.settingsLabel()}
             />
           </TooltipKeybind>
-          <Tooltip placement={placement()} value={props.helpLabel()}>
-            <IconButton
-              icon="help"
-              variant="ghost"
-              size="large"
-              onClick={props.onOpenHelp}
-              aria-label={props.helpLabel()}
-            />
-          </Tooltip>
         </div>
       </div>
 

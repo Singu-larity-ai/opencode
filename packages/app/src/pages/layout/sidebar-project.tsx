@@ -135,10 +135,6 @@ const ProjectTile = (props: {
         }}
         onClick={() => {
           props.setOpen(false)
-          if (props.selected()) {
-            layout.sidebar.toggle()
-            return
-          }
           props.navigateToProject(props.project.worktree)
         }}
         onBlur={() => props.setOpen(false)}

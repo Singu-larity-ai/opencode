@@ -154,7 +154,7 @@ export function SessionHeader() {
   const hotkey = createMemo(() => command.keybind("file.open"))
   const os = createMemo(() => detectOS(platform))
   const isDesktopBeta = platform.platform === "desktop" && import.meta.env.VITE_OPENCODE_CHANNEL === "beta"
-  const search = createMemo(() => !isDesktopBeta || settings.general.showSearch())
+  const search = createMemo(() => false) // Hidden
   const tree = createMemo(() => !isDesktopBeta || settings.general.showFileTree())
   const term = createMemo(() => !isDesktopBeta || settings.general.showTerminal())
   const status = createMemo(() => !isDesktopBeta || settings.general.showStatus())
@@ -313,7 +313,7 @@ export function SessionHeader() {
           <Portal mount={mount()}>
             <div class="flex items-center gap-2">
               <Show when={projectDirectory()}>
-                <div class="hidden xl:flex items-center">
+                <div class="hidden md:flex items-center">
                   <Show
                     when={canOpen()}
                     fallback={
@@ -426,12 +426,12 @@ export function SessionHeader() {
                 </div>
               </Show>
               <div class="flex items-center gap-1">
-                <Show when={status()}>
+                <Show when={false}>
                   <Tooltip placement="bottom" value={language.t("status.popover.trigger")}>
                     <StatusPopover />
                   </Tooltip>
                 </Show>
-                <Show when={term()}>
+                <Show when={false}>
                   <TooltipKeybind
                     title={language.t("command.terminal.toggle")}
                     keybind={command.keybind("terminal.toggle")}
@@ -450,21 +450,23 @@ export function SessionHeader() {
                 </Show>
 
                 <div class="hidden md:flex items-center gap-1 shrink-0">
-                  <TooltipKeybind
-                    title={language.t("command.review.toggle")}
-                    keybind={command.keybind("review.toggle")}
-                  >
-                    <Button
-                      variant="ghost"
-                      class="group/review-toggle titlebar-icon w-8 h-6 p-0 box-border"
-                      onClick={() => view().reviewPanel.toggle()}
-                      aria-label={language.t("command.review.toggle")}
-                      aria-expanded={view().reviewPanel.opened()}
-                      aria-controls="review-panel"
+                  <div class="hidden">
+                    <TooltipKeybind
+                      title={language.t("command.review.toggle")}
+                      keybind={command.keybind("review.toggle")}
                     >
-                      <Icon size="small" name={view().reviewPanel.opened() ? "review-active" : "review"} />
-                    </Button>
-                  </TooltipKeybind>
+                      <Button
+                        variant="ghost"
+                        class="group/review-toggle titlebar-icon w-8 h-6 p-0 box-border"
+                        onClick={() => view().reviewPanel.toggle()}
+                        aria-label={language.t("command.review.toggle")}
+                        aria-expanded={view().reviewPanel.opened()}
+                        aria-controls="review-panel"
+                      >
+                        <Icon size="small" name={view().reviewPanel.opened() ? "review-active" : "review"} />
+                      </Button>
+                    </TooltipKeybind>
+                  </div>
 
                   <Show when={tree()}>
                     <TooltipKeybind

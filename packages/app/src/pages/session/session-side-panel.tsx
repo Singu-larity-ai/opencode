@@ -118,7 +118,7 @@ export function SessionSidePanel(props: {
   }
 
   const openReviewPanel = () => {
-    if (!view().reviewPanel.opened()) view().reviewPanel.open()
+    // No-op: review panel is hidden
   }
 
   const openTab = createOpenSessionFileTab({
@@ -240,7 +240,7 @@ export function SessionSidePanel(props: {
                         onCleanup(stop)
                       }}
                     >
-                      <Show when={reviewTab() && props.canReview()}>
+                      <Show when={false && reviewTab() && props.canReview()}>
                         <Tabs.Trigger value="review">
                           <div class="flex items-center gap-1.5">
                             <div>{language.t("session.tab.review")}</div>

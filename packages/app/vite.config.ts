@@ -7,6 +7,11 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     port: 3000,
+    proxy: {
+      "/auth": {
+        target: "http://localhost:4096",
+      },
+    },
   },
   build: {
     target: "esnext",
