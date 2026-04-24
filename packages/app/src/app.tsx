@@ -26,6 +26,7 @@ import {
   Suspense,
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
+import { AuthProvider, AuthGuard } from "@/context/auth"
 import { CommandProvider } from "@/context/command"
 import { CommentsProvider } from "@/context/comments"
 import { FileProvider } from "@/context/file"
@@ -49,6 +50,8 @@ import { useCheckServerHealth } from "./utils/server-health"
 const HomeRoute = lazy(() => import("@/pages/home"))
 const loadSession = () => import("@/pages/session")
 const Session = lazy(loadSession)
+const Members = lazy(() => import("@/pages/members"))
+const Profile = lazy(() => import("@/pages/profile"))
 const Loading = () => <div class="size-full" />
 
 if (typeof location === "object" && /\/session(?:\/|$)/.test(location.pathname)) {
@@ -294,16 +297,22 @@ export function AppInterface(props: {
           <QueryProvider>
             <GlobalSDKProvider>
               <GlobalSyncProvider>
-                <Dynamic
-                  component={props.router ?? Router}
-                  root={(routerProps) => <RouterRoot appChildren={props.children}>{routerProps.children}</RouterRoot>}
-                >
-                  <Route path="/" component={HomeRoute} />
-                  <Route path="/:dir" component={DirectoryLayout}>
-                    <Route path="/" component={SessionIndexRoute} />
-                    <Route path="/session/:id?" component={SessionRoute} />
-                  </Route>
-                </Dynamic>
+                <AuthProvider>
+                  <AuthGuard>
+                    <Dynamic
+                      component={props.router ?? Router}
+                      root={(routerProps) => <RouterRoot appChildren={props.children}>{routerProps.children}</RouterRoot>}
+                    >
+                      <Route path="/" component={HomeRoute} />
+                      <Route path="/members" component={Members} />
+                      <Route path="/profile/:userID" component={Profile} />
+                      <Route path="/:dir" component={DirectoryLayout}>
+                        <Route path="/" component={SessionIndexRoute} />
+                        <Route path="/session/:id?" component={SessionRoute} />
+                      </Route>
+                    </Dynamic>
+                  </AuthGuard>
+                </AuthProvider>
               </GlobalSyncProvider>
             </GlobalSDKProvider>
           </QueryProvider>

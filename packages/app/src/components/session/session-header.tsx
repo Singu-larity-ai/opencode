@@ -285,7 +285,7 @@ export function SessionHeader() {
               type="button"
               variant="ghost"
               size="small"
-              class="hidden md:flex w-[240px] max-w-full min-w-0 items-center gap-2 justify-between rounded-md border border-border-weak-base bg-surface-panel shadow-none cursor-default"
+              class="hidden w-[240px] max-w-full min-w-0 items-center gap-2 justify-between rounded-md border border-border-weak-base bg-surface-panel shadow-none cursor-default"
               onClick={() => command.trigger("file.open")}
               aria-label={language.t("session.header.searchFiles")}
             >
@@ -428,10 +428,11 @@ export function SessionHeader() {
               <div class="flex items-center gap-1">
                 <Show when={status()}>
                   <Tooltip placement="bottom" value={language.t("status.popover.trigger")}>
-                    <StatusPopover />
+                    <div class="hidden"><StatusPopover /></div>
                   </Tooltip>
                 </Show>
                 <Show when={term()}>
+                  <div class="hidden">
                   <TooltipKeybind
                     title={language.t("command.terminal.toggle")}
                     keybind={command.keybind("terminal.toggle")}
@@ -447,9 +448,10 @@ export function SessionHeader() {
                       <Icon size="small" name={view().terminal.opened() ? "terminal-active" : "terminal"} />
                     </Button>
                   </TooltipKeybind>
+                  </div>
                 </Show>
 
-                <div class="hidden md:flex items-center gap-1 shrink-0">
+                <div class="hidden items-center gap-1 shrink-0">
                   <TooltipKeybind
                     title={language.t("command.review.toggle")}
                     keybind={command.keybind("review.toggle")}

@@ -926,6 +926,10 @@ export const dict = {
   "session.delete.title": "Delete session",
   "session.delete.confirm": 'Delete session "{{name}}"?',
   "session.delete.button": "Delete session",
+  "session.deleteProject.failed.title": "Failed to delete project",
+  "session.deleteProject.title": "Delete project",
+  "session.deleteProject.confirm": 'Delete project "{{name}}"? This will permanently delete the project and all its sessions.',
+  "session.deleteProject.button": "Delete project",
 
   "workspace.new": "New workspace",
   "workspace.type.local": "local",

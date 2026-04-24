@@ -1,0 +1,13 @@
+{
+  "name": "iterm-mirror",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "server": "node server/index.js",
+    "bridge": "python3 bridge/iterm_bridge.py",
+    "web": "node web/serve.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

@@ -25,7 +25,10 @@ import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { useLanguage } from "@/context/language"
 import { useSessionKey } from "@/pages/session/session-layout"
 import { useGlobalSDK } from "@/context/global-sdk"
+import { useGlobalSync } from "@/context/global-sync"
+import { useLayout } from "@/context/layout"
 import { usePlatform } from "@/context/platform"
+import { decode64 } from "@/utils/base64"
 import { useSettings } from "@/context/settings"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
@@ -234,6 +237,8 @@ export function MessageTimeline(props: {
 
   const navigate = useNavigate()
   const globalSDK = useGlobalSDK()
+  const globalSync = useGlobalSync()
+  const layout = useLayout()
   const sdk = useSDK()
   const sync = useSync()
   const settings = useSettings()
@@ -241,6 +246,13 @@ export function MessageTimeline(props: {
   const language = useLanguage()
   const { params, sessionKey } = useSessionKey()
   const platform = usePlatform()
+
+  const projectDirectory = createMemo(() => decode64(params.dir) ?? "")
+  const project = createMemo(() => {
+    const dir = projectDirectory()
+    if (!dir) return
+    return globalSync.data.project.find((p) => p.worktree === dir)
+  })
 
   const rendered = createMemo(() => props.renderedUserMessages.map((message) => message.id))
   const sessionID = createMemo(() => params.id)
@@ -593,21 +605,34 @@ export function MessageTimeline(props: {
     navigate(`/${params.dir}/session/${id}`)
   }
 
-  function DialogDeleteSession(props: { sessionID: string }) {
-    const name = createMemo(
-      () => sessionTitle(sync.session.get(props.sessionID)?.title) ?? language.t("command.session.new"),
+  function DialogDeleteProject() {
+    const projectName = createMemo(
+      () => project()?.name ?? getFilename(projectDirectory()) ?? language.t("command.session.new"),
     )
     const handleDelete = async () => {
-      await deleteSession(props.sessionID)
+      const p = project()
+      if (!p) return
+      const dir = projectDirectory()
+      const result = await globalSDK.client.project
+        .delete({ projectID: p.id })
+        .then((x) => x.data)
+        .catch((err) => {
+          showToast({ variant: "error", title: language.t("session.deleteProject.failed.title"), description: errorMessage(err) })
+          return false
+        })
+      if (!result) return
+      if (dir) layout.projects.close(dir)
+      await globalSync.bootstrap()
       dialog.close()
+      navigate("/")
     }
 
     return (
-      <Dialog title={language.t("session.delete.title")} fit>
+      <Dialog title={language.t("session.deleteProject.title")} fit>
         <div class="flex flex-col gap-4 pl-6 pr-2.5 pb-3">
           <div class="flex flex-col gap-1">
             <span class="text-14-regular text-text-strong">
-              {language.t("session.delete.confirm", { name: name() })}
+              {language.t("session.deleteProject.confirm", { name: projectName() })}
             </span>
           </div>
           <div class="flex justify-end gap-2">
@@ -615,7 +640,7 @@ export function MessageTimeline(props: {
               {language.t("common.cancel")}
             </Button>
             <Button variant="primary" size="large" onClick={handleDelete}>
-              {language.t("session.delete.button")}
+              {language.t("session.deleteProject.button")}
             </Button>
           </div>
         </div>
@@ -883,7 +908,7 @@ export function MessageTimeline(props: {
                                 </DropdownMenu.Item>
                                 <DropdownMenu.Separator />
                                 <DropdownMenu.Item
-                                  onSelect={() => dialog.show(() => <DialogDeleteSession sessionID={id()} />)}
+                                  onSelect={() => dialog.show(() => <DialogDeleteProject />)}
                                 >
                                   <DropdownMenu.ItemLabel>{language.t("common.delete")}</DropdownMenu.ItemLabel>
                                 </DropdownMenu.Item>

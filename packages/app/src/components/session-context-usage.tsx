@@ -58,19 +58,7 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
     return usd().format(metrics().totalCost)
   })
 
-  const openContext = () => {
-    if (!params.id) return
-
-    if (tabState.activeTab() === "context") {
-      tabs().close("context")
-      return
-    }
-    openSessionContext({
-      view: view(),
-      layout,
-      tabs: tabs(),
-    })
-  }
+  const openContext = () => {}
 
   const circle = () => (
     <div class="flex items-center justify-center">

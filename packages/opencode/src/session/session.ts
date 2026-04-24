@@ -520,6 +520,17 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       permission?: Permission.Ruleset
       workspaceID?: WorkspaceID
     }) {
+      const ctx = yield* InstanceState.context
+      const existing = yield* db((d) =>
+        d
+          .select()
+          .from(SessionTable)
+          .where(and(eq(SessionTable.project_id, ctx.project.id), isNull(SessionTable.parent_id)))
+          .limit(1)
+          .get(),
+      )
+      if (existing) return fromRow(existing)
+
       const directory = yield* InstanceState.directory
       const workspace = yield* InstanceState.workspaceID
       return yield* createNext({

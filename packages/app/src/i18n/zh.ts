@@ -804,6 +804,10 @@ export const dict = {
   "session.delete.title": "删除会话",
   "session.delete.confirm": '删除会话 "{{name}}"？',
   "session.delete.button": "删除会话",
+  "session.deleteProject.failed.title": "删除项目失败",
+  "session.deleteProject.title": "删除项目",
+  "session.deleteProject.confirm": '删除项目 "{{name}}"？此操作将永久删除该项目及其所有会话。',
+  "session.deleteProject.button": "删除项目",
 
   "workspace.new": "新建工作区",
   "workspace.type.local": "本地",
