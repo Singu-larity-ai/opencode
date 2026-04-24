@@ -100,7 +100,7 @@ export const CompressionMiddleware: MiddlewareHandler = (c, next) => {
 }
 
 const AUTH_COOKIE = "singularity_session"
-const AUTH_PATHS = new Set(["/auth/login", "/auth/callback", "/auth/logout", "/auth/me", "/global/health"])
+const AUTH_PATHS = new Set(["/auth/login", "/auth/callback", "/auth/logout", "/auth/me", "/global/health", "/global/event"])
 
 async function hashToken(token: string): Promise<string> {
   const data = new TextEncoder().encode(token)
