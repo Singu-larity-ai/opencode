@@ -17,6 +17,10 @@ import * as AuthSession from "../auth/user/session"
 const log = Log.create({ service: "server" })
 
 export const ErrorMiddleware: ErrorHandler = (err, c) => {
+  console.error("🚨 [ErrorMiddleware] FAILED:", err)
+  console.error("   err.stack:", err instanceof Error ? err.stack : "N/A")
+  console.error("   err.name:", err instanceof Error ? err.name : "N/A")
+  console.error("   err.message:", err instanceof Error ? err.message : String(err))
   log.error("failed", {
     error: err,
   })
@@ -71,6 +75,7 @@ export const LoggerMiddleware: MiddlewareHandler = async (c, next) => {
 export function CorsMiddleware(opts?: { cors?: string[] }): MiddlewareHandler {
   return cors({
     maxAge: 86_400,
+    credentials: true,
     origin(input) {
       if (!input) return
 

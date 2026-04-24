@@ -85,7 +85,11 @@ import type {
   PermissionRespondErrors,
   PermissionRespondResponses,
   PermissionRuleset,
+  ProjectCreateErrors,
+  ProjectCreateResponses,
   ProjectCurrentResponses,
+  ProjectDeleteErrors,
+  ProjectDeleteResponses,
   ProjectInitGitResponses,
   ProjectListResponses,
   ProjectUpdateErrors,
@@ -967,6 +971,43 @@ export class Project extends HeyApiClient {
   }
 
   /**
+   * Create project
+   *
+   * Create a new project with an auto-generated directory, git repo, and session. Returns the project and session info.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      name?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "name" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ProjectCreateResponses, ProjectCreateErrors, ThrowOnError>({
+      url: "/project",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Get current project
    *
    * Retrieve the currently active project that OpenCode is working with.
@@ -997,12 +1038,13 @@ export class Project extends HeyApiClient {
   }
 
   /**
-   * Initialize git repository
+   * Delete project
    *
-   * Create a git repository for the current project and return the refreshed project info.
+   * Delete a project and all associated data (sessions, messages, project folder). This is irreversible.
    */
-  public initGit<ThrowOnError extends boolean = false>(
-    parameters?: {
+  public delete<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
       directory?: string
       workspace?: string
     },
@@ -1013,14 +1055,15 @@ export class Project extends HeyApiClient {
       [
         {
           args: [
+            { in: "path", key: "projectID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
           ],
         },
       ],
     )
-    return (options?.client ?? this.client).post<ProjectInitGitResponses, unknown, ThrowOnError>({
-      url: "/project/git/init",
+    return (options?.client ?? this.client).delete<ProjectDeleteResponses, ProjectDeleteErrors, ThrowOnError>({
+      url: "/project/{projectID}",
       ...options,
       ...params,
     })
@@ -1075,6 +1118,36 @@ export class Project extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Initialize git repository
+   *
+   * Create a git repository for the current project and return the refreshed project info.
+   */
+  public initGit<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ProjectInitGitResponses, unknown, ThrowOnError>({
+      url: "/project/git/init",
+      ...options,
+      ...params,
     })
   }
 }

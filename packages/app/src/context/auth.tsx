@@ -1,12 +1,14 @@
-import { createContext, useContext, type ParentProps } from "solid-js"
+import { createContext, useContext, on, createEffect, type ParentProps } from "solid-js"
 import { createResource, Show, onMount } from "solid-js"
 import { usePlatform } from "./platform"
+import { removePersisted } from "@/utils/persist"
 
 export type AuthUser = {
   id: string
   email?: string
   name?: string
   avatar_url?: string
+  bio?: string
 }
 
 type AuthState = {
@@ -20,14 +22,38 @@ type AuthState = {
 const AuthContext = createContext<AuthState>()
 
 async function fetchUser(): Promise<{ authenticated: boolean; user?: AuthUser }> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
   try {
-    const res = await fetch("/auth/me", { credentials: "include" })
+    const res = await fetch("/auth/me", { credentials: "include", signal: controller.signal })
+    clearTimeout(timeout)
     if (!res.ok) return { authenticated: false }
     const data = await res.json()
     return data
-  } catch {
+  } catch (err) {
+    clearTimeout(timeout)
+    if (err instanceof Error && err.name === "AbortError") {
+      console.error("[auth] fetchUser timed out")
+    }
     return { authenticated: false }
   }
+}
+
+const GLOBAL_STORAGE = "opencode.global.dat"
+
+function clearGlobalCaches() {
+  const keysToRemove: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key) continue
+    if (key.startsWith("opencode.") && (key.includes("globalSync") || key.includes("project"))) {
+      keysToRemove.push(key)
+    }
+  }
+  for (const key of keysToRemove) {
+    localStorage.removeItem(key)
+  }
+  console.log("[auth] Cleared global caches after user change")
 }
 
 export function AuthProvider(props: ParentProps) {
@@ -39,8 +65,22 @@ export function AuthProvider(props: ParentProps) {
   const isAuthenticated = () => authData()?.authenticated === true
   const loading = () => authData.loading
 
+  createEffect(() => {
+    const currentUser = user()
+    if (currentUser?.id) {
+      const cachedUserId = localStorage.getItem("opencode.auth.userId")
+      if (cachedUserId && cachedUserId !== currentUser.id) {
+        console.log("[auth] User changed from", cachedUserId, "to", currentUser.id, "- clearing caches")
+        clearGlobalCaches()
+      }
+      localStorage.setItem("opencode.auth.userId", currentUser.id)
+    }
+  })
+
   const logout = () => {
-    window.location.href = "/auth/logout"
+    clearGlobalCaches()
+    localStorage.removeItem("opencode.auth.userId")
+    window.location.replace("/auth/logout")
   }
 
   return (

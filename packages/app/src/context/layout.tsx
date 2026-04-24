@@ -387,9 +387,10 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     function enrich(project: { worktree: string; expanded: boolean }) {
       const [childStore] = globalSync.child(project.worktree, { bootstrap: false })
       const projectID = childStore.project
+      const projectList = globalSync.data.project ?? []
       const metadata = projectID
-        ? globalSync.data.project.find((x) => x.id === projectID)
-        : globalSync.data.project.find((x) => x.worktree === project.worktree)
+        ? projectList.find((x) => x.id === projectID)
+        : projectList.find((x) => x.worktree === project.worktree)
 
       const local = childStore.projectMeta
       const localOverride =
@@ -478,9 +479,9 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       })
     })
 
-    const enriched = createMemo(() => server.projects.list().map(enrich))
+    const enriched = createMemo(() => (server.projects.list() ?? []).map(enrich))
     const list = createMemo(() => {
-      const projects = enriched()
+      const projects = enriched() ?? []
       return projects.map((project) => {
         const color = project.icon?.color ?? colors[project.worktree]
         if (!color) return project
@@ -580,7 +581,9 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       projects: {
         list,
         open(directory: string) {
+          if (!directory) return
           const root = rootFor(directory)
+          if (!root) return
           if (server.projects.list().find((x) => x.worktree === root)) return
           void globalSync.project.loadSessions(root)
           server.projects.open(root)

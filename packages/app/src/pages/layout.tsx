@@ -87,6 +87,7 @@ import {
 } from "./layout/sidebar-workspace"
 import { ProjectDragOverlay, SortableProject, type ProjectSidebarContext } from "./layout/sidebar-project"
 import { SidebarContent } from "./layout/sidebar-shell"
+import { ConversationList } from "./layout/conversation-list"
 
 export default function Layout(props: ParentProps) {
   const [store, setStore, , ready] = persisted(
@@ -160,6 +161,7 @@ export default function Layout(props: ParentProps) {
     sizing: false,
     peek: undefined as string | undefined,
     peeked: false,
+    activeNav: "conversations" as string,
   })
 
   const editor = createInlineEditorController()
@@ -1445,6 +1447,14 @@ export default function Layout(props: ParentProps) {
     })
   }
 
+  const showNewProjectDialog = () => {
+    const run = ++dialogRun
+    void import("@/components/dialog-new-project").then((x) => {
+      if (dialogDead || dialogRun !== run) return
+      dialog.show(() => <x.DialogNewProject />)
+    })
+  }
+
   async function chooseProject() {
     function resolve(result: string | string[] | null) {
       if (Array.isArray(result)) {
@@ -2322,32 +2332,26 @@ export default function Layout(props: ParentProps) {
     )
   }
 
-  const projects = () => layout.projects.list()
-  const projectOverlay = () => <ProjectDragOverlay projects={projects} activeProject={() => store.activeProject} />
   const sidebarContent = (mobile?: boolean) => (
     <SidebarContent
       mobile={mobile}
       opened={() => layout.sidebar.opened()}
       aimMove={aim.move}
-      projects={projects}
-      renderProject={(project) => (
-        <SortableProject ctx={projectSidebarCtx} project={project} sortNow={sortNow} mobile={mobile} />
-      )}
-      handleDragStart={handleDragStart}
-      handleDragEnd={handleDragEnd}
-      handleDragOver={handleDragOver}
-      openProjectLabel={language.t("command.project.open")}
-      openProjectKeybind={() => command.keybind("project.open")}
-      onOpenProject={chooseProject}
-      renderProjectOverlay={projectOverlay}
+      activeNav={() => state.activeNav}
+      onNavSelect={(id: string) => setState("activeNav", id)}
       settingsLabel={() => language.t("sidebar.settings")}
       settingsKeybind={() => command.keybind("settings.open")}
       onOpenSettings={openSettings}
       helpLabel={() => language.t("sidebar.help")}
       onOpenHelp={() => platform.openLink("https://opencode.ai/desktop-feedback")}
-      renderPanel={() =>
-        mobile ? <SidebarPanel project={currentProject} mobile /> : <SidebarPanel project={currentProject} merged />
-      }
+      renderPanel={() => (
+        <ConversationList
+          activeProject={currentProject}
+          panelWidth={() => side()}
+          mobile={mobile}
+          onNewConversation={showNewProjectDialog}
+        />
+      )}
     />
   )
 

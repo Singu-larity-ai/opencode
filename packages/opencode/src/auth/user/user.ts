@@ -1,31 +1,37 @@
 import { eq } from "drizzle-orm"
-import { use } from "../../storage/db"
-import { AuthUserTable } from "./schema.sql"
+import { db, AuthUserTable } from "./db"
 
 export type AuthUser = typeof AuthUserTable.$inferSelect
-export type NewAuthUser = typeof AuthUserTable.$inferInsert
 
 export function findById(id: string): AuthUser | undefined {
-  return use((db) => db.select().from(AuthUserTable).where(eq(AuthUserTable.id, id)).get())
+  return db.select().from(AuthUserTable).where(eq(AuthUserTable.id, id)).get()
 }
 
-export function findByAuthingId(authingId: string): AuthUser | undefined {
-  return use((db) => db.select().from(AuthUserTable).where(eq(AuthUserTable.authing_id, authingId)).get())
+export function findByCasdoorId(casdoorId: string): AuthUser | undefined {
+  return db.select().from(AuthUserTable).where(eq(AuthUserTable.casdoor_id, casdoorId)).get()
 }
 
-export function upsert(params: { authing_id: string; email?: string; name?: string; avatar_url?: string }): AuthUser {
-  const existing = findByAuthingId(params.authing_id)
+export function list(): AuthUser[] {
+  return db.select().from(AuthUserTable).all()
+}
+
+export function updateBio(id: string, bio?: string): AuthUser {
+  db.update(AuthUserTable).set({ bio: bio ?? null, time_updated: Date.now() }).where(eq(AuthUserTable.id, id)).run()
+  return findById(id)!
+}
+
+export function upsert(params: { casdoor_id: string; email?: string; name?: string; avatar_url?: string }): AuthUser {
+  const existing = findByCasdoorId(params.casdoor_id)
   if (existing) {
-    const updates: Partial<NewAuthUser> = {}
+    const updates: Partial<{ email: string | null; name: string | null; avatar_url: string | null; time_updated: number }> = { time_updated: Date.now() }
     if (params.email !== undefined) updates.email = params.email
     if (params.name !== undefined) updates.name = params.name
     if (params.avatar_url !== undefined) updates.avatar_url = params.avatar_url
-    if (Object.keys(updates).length > 0) {
-      use((db) => db.update(AuthUserTable).set(updates).where(eq(AuthUserTable.id, existing.id)))
-    }
+    db.update(AuthUserTable).set(updates).where(eq(AuthUserTable.id, existing.id)).run()
     return { ...existing, ...updates } as AuthUser
   }
   const id = crypto.randomUUID()
-  use((db) => db.insert(AuthUserTable).values({ id, ...params }))
-  return { id, authing_id: params.authing_id, email: params.email ?? null, name: params.name ?? null, avatar_url: params.avatar_url ?? null, time_created: Date.now(), time_updated: Date.now() }
+  const now = Date.now()
+  db.insert(AuthUserTable).values({ id, casdoor_id: params.casdoor_id, email: params.email ?? null, name: params.name ?? null, avatar_url: params.avatar_url ?? null, bio: null, time_created: now, time_updated: now }).run()
+  return { id, casdoor_id: params.casdoor_id, email: params.email ?? null, name: params.name ?? null, avatar_url: params.avatar_url ?? null, bio: null, time_created: now, time_updated: now }
 }

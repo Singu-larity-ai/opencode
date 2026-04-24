@@ -37,11 +37,11 @@ export const Default = lazy(() => create({}))
 function create(opts: { cors?: string[] }) {
   const app = new Hono()
     .onError(ErrorMiddleware)
+    .use(CorsMiddleware(opts))
     .use(SessionMiddleware)
     .use(AuthMiddleware)
     .use(LoggerMiddleware)
     .use(CompressionMiddleware)
-    .use(CorsMiddleware(opts))
     .route("/auth", AuthRoutes())
     .route("/global", GlobalRoutes())
 

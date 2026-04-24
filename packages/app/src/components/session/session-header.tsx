@@ -154,7 +154,7 @@ export function SessionHeader() {
   const hotkey = createMemo(() => command.keybind("file.open"))
   const os = createMemo(() => detectOS(platform))
   const isDesktopBeta = platform.platform === "desktop" && import.meta.env.VITE_OPENCODE_CHANNEL === "beta"
-  const search = createMemo(() => false) // Hidden
+  const search = createMemo(() => !isDesktopBeta || settings.general.showSearch())
   const tree = createMemo(() => !isDesktopBeta || settings.general.showFileTree())
   const term = createMemo(() => !isDesktopBeta || settings.general.showTerminal())
   const status = createMemo(() => !isDesktopBeta || settings.general.showStatus())
@@ -285,7 +285,7 @@ export function SessionHeader() {
               type="button"
               variant="ghost"
               size="small"
-              class="hidden md:flex w-[240px] max-w-full min-w-0 items-center gap-2 justify-between rounded-md border border-border-weak-base bg-surface-panel shadow-none cursor-default"
+              class="hidden w-[240px] max-w-full min-w-0 items-center gap-2 justify-between rounded-md border border-border-weak-base bg-surface-panel shadow-none cursor-default"
               onClick={() => command.trigger("file.open")}
               aria-label={language.t("session.header.searchFiles")}
             >
@@ -313,7 +313,7 @@ export function SessionHeader() {
           <Portal mount={mount()}>
             <div class="flex items-center gap-2">
               <Show when={projectDirectory()}>
-                <div class="hidden md:flex items-center">
+                <div class="hidden xl:flex items-center">
                   <Show
                     when={canOpen()}
                     fallback={
@@ -426,12 +426,13 @@ export function SessionHeader() {
                 </div>
               </Show>
               <div class="flex items-center gap-1">
-                <Show when={false}>
+                <Show when={status()}>
                   <Tooltip placement="bottom" value={language.t("status.popover.trigger")}>
-                    <StatusPopover />
+                    <div class="hidden"><StatusPopover /></div>
                   </Tooltip>
                 </Show>
-                <Show when={false}>
+                <Show when={term()}>
+                  <div class="hidden">
                   <TooltipKeybind
                     title={language.t("command.terminal.toggle")}
                     keybind={command.keybind("terminal.toggle")}
@@ -447,26 +448,25 @@ export function SessionHeader() {
                       <Icon size="small" name={view().terminal.opened() ? "terminal-active" : "terminal"} />
                     </Button>
                   </TooltipKeybind>
+                  </div>
                 </Show>
 
-                <div class="hidden md:flex items-center gap-1 shrink-0">
-                  <div class="hidden">
-                    <TooltipKeybind
-                      title={language.t("command.review.toggle")}
-                      keybind={command.keybind("review.toggle")}
+                <div class="hidden items-center gap-1 shrink-0">
+                  <TooltipKeybind
+                    title={language.t("command.review.toggle")}
+                    keybind={command.keybind("review.toggle")}
+                  >
+                    <Button
+                      variant="ghost"
+                      class="group/review-toggle titlebar-icon w-8 h-6 p-0 box-border"
+                      onClick={() => view().reviewPanel.toggle()}
+                      aria-label={language.t("command.review.toggle")}
+                      aria-expanded={view().reviewPanel.opened()}
+                      aria-controls="review-panel"
                     >
-                      <Button
-                        variant="ghost"
-                        class="group/review-toggle titlebar-icon w-8 h-6 p-0 box-border"
-                        onClick={() => view().reviewPanel.toggle()}
-                        aria-label={language.t("command.review.toggle")}
-                        aria-expanded={view().reviewPanel.opened()}
-                        aria-controls="review-panel"
-                      >
-                        <Icon size="small" name={view().reviewPanel.opened() ? "review-active" : "review"} />
-                      </Button>
-                    </TooltipKeybind>
-                  </div>
+                      <Icon size="small" name={view().reviewPanel.opened() ? "review-active" : "review"} />
+                    </Button>
+                  </TooltipKeybind>
 
                   <Show when={tree()}>
                     <TooltipKeybind

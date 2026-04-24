@@ -26,6 +26,7 @@ export type Project = {
     initialized?: number
   }
   sandboxes: Array<string>
+  user_id?: string
 }
 
 export type EventProjectUpdated = {
@@ -2596,6 +2597,39 @@ export type ProjectListResponses = {
 
 export type ProjectListResponse = ProjectListResponses[keyof ProjectListResponses]
 
+export type ProjectCreateData = {
+  body?: {
+    name?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/project"
+}
+
+export type ProjectCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ProjectCreateError = ProjectCreateErrors[keyof ProjectCreateErrors]
+
+export type ProjectCreateResponses = {
+  /**
+   * Created project and session
+   */
+  200: {
+    project: Project
+    directory: string
+  }
+}
+
+export type ProjectCreateResponse = ProjectCreateResponses[keyof ProjectCreateResponses]
+
 export type ProjectCurrentData = {
   body?: never
   path?: never
@@ -2615,24 +2649,39 @@ export type ProjectCurrentResponses = {
 
 export type ProjectCurrentResponse = ProjectCurrentResponses[keyof ProjectCurrentResponses]
 
-export type ProjectInitGitData = {
+export type ProjectDeleteData = {
   body?: never
-  path?: never
+  path: {
+    projectID: string
+  }
   query?: {
     directory?: string
     workspace?: string
   }
-  url: "/project/git/init"
+  url: "/project/{projectID}"
 }
 
-export type ProjectInitGitResponses = {
+export type ProjectDeleteErrors = {
   /**
-   * Project information after git initialization
+   * Bad request
    */
-  200: Project
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
 }
 
-export type ProjectInitGitResponse = ProjectInitGitResponses[keyof ProjectInitGitResponses]
+export type ProjectDeleteError = ProjectDeleteErrors[keyof ProjectDeleteErrors]
+
+export type ProjectDeleteResponses = {
+  /**
+   * Successfully deleted project
+   */
+  200: boolean
+}
+
+export type ProjectDeleteResponse = ProjectDeleteResponses[keyof ProjectDeleteResponses]
 
 export type ProjectUpdateData = {
   body?: {
@@ -2680,6 +2729,25 @@ export type ProjectUpdateResponses = {
 }
 
 export type ProjectUpdateResponse = ProjectUpdateResponses[keyof ProjectUpdateResponses]
+
+export type ProjectInitGitData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/project/git/init"
+}
+
+export type ProjectInitGitResponses = {
+  /**
+   * Project information after git initialization
+   */
+  200: Project
+}
+
+export type ProjectInitGitResponse = ProjectInitGitResponses[keyof ProjectInitGitResponses]
 
 export type PtyListData = {
   body?: never

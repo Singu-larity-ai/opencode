@@ -6,6 +6,7 @@ import { Log } from "../util"
 import { Flag } from "@/flag/flag"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
+import { Global } from "@/global"
 import { which } from "../util/which"
 import { ProjectID } from "./schema"
 import { Effect, Layer, Path, Scope, Context, Stream, Types, Schema } from "effect"
@@ -47,6 +48,7 @@ export const Info = Schema.Struct({
   commands: Schema.optional(ProjectCommands),
   time: ProjectTime,
   sandboxes: Schema.Array(Schema.String),
+  user_id: Schema.optional(Schema.String),
 })
   .annotate({ identifier: "Project" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -74,6 +76,7 @@ export function fromRow(row: Row): Info {
     },
     sandboxes: row.sandboxes,
     commands: row.commands ?? undefined,
+    user_id: row.user_id ?? undefined,
   }
 }
 
@@ -94,6 +97,8 @@ export interface Interface {
   readonly discover: (input: Info) => Effect.Effect<void>
   readonly list: () => Effect.Effect<Info[]>
   readonly get: (id: ProjectID) => Effect.Effect<Info | undefined>
+  readonly create: (input?: { name?: string }, userID?: string) => Effect.Effect<{ project: Info; directory: string }>
+  readonly remove: (id: ProjectID) => Effect.Effect<void>
   readonly update: (input: UpdateInput) => Effect.Effect<Info>
   readonly initGit: (input: { directory: string; project: Info }) => Effect.Effect<Info>
   readonly setInitialized: (id: ProjectID) => Effect.Effect<void>
@@ -444,11 +449,69 @@ export const layer: Layer.Layer<
       yield* emitUpdated(fromRow(result))
     })
 
+    const remove = Effect.fn("Project.remove")(function* (id: ProjectID) {
+      const row = yield* db((d) => d.select().from(ProjectTable).where(eq(ProjectTable.id, id)).get())
+      if (!row) throw new Error(`Project not found: ${id}`)
+      const info = fromRow(row)
+
+      yield* db((d) => d.delete(ProjectTable).where(eq(ProjectTable.id, id)).run())
+
+      if (info.worktree.startsWith(pathSvc.join(Global.Path.state, "projects"))) {
+        yield* fs.remove(info.worktree, { recursive: true }).pipe(
+          Effect.catchCause((cause) => {
+            log.warn("failed to remove project directory", { directory: info.worktree, cause })
+            return Effect.void
+          }),
+        )
+      }
+
+      yield* emitUpdated(info)
+    })
+
+    const create = Effect.fn("Project.create")(function* (input?: { name?: string }, userID?: string) {
+      const projectsRoot = userID
+        ? pathSvc.join(Global.Path.state, "projects", userID)
+        : pathSvc.join(Global.Path.state, "projects")
+      console.log("🟡 [Project.create] 1. projectsRoot:", projectsRoot)
+      yield* fs.makeDirectory(projectsRoot, { recursive: true }).pipe(Effect.orDie)
+      console.log("🟡 [Project.create] 2. mkdir projectsRoot OK")
+
+      const id = crypto.randomUUID()
+      const directory = pathSvc.join(projectsRoot, id)
+      console.log("🟡 [Project.create] 3. directory:", directory)
+      yield* fs.makeDirectory(directory, { recursive: true }).pipe(Effect.orDie)
+      console.log("🟡 [Project.create] 4. mkdir directory OK")
+
+      const gitInitResult = yield* git(["init", "--quiet"], { cwd: directory })
+      console.log("🟡 [Project.create] 5. git init result:", gitInitResult)
+      const gitCommitResult = yield* git(["commit", "--allow-empty", "-m", "Initial commit", "--quiet"], { cwd: directory })
+      console.log("🟡 [Project.create] 6. git commit result:", gitCommitResult)
+
+      const fromDirResult = yield* fromDirectory(directory)
+      console.log("🟡 [Project.create] 7. fromDirectory result:", fromDirResult)
+
+      const name = input?.name ?? `Conversation ${fromDirResult.project.id.slice(0, 6)}`
+      let result = yield* update({ projectID: fromDirResult.project.id, name })
+
+      if (userID) {
+        yield* db((d) =>
+          d.update(ProjectTable).set({ user_id: userID }).where(eq(ProjectTable.id, result.id)).run(),
+        )
+        result = { ...result, user_id: userID }
+      }
+
+      console.log("🟡 [Project.create] 8. final result:", { project: result, directory })
+
+      return { project: result, directory }
+    })
+
     return Service.of({
       fromDirectory,
       discover,
       list,
       get,
+      create,
+      remove,
       update,
       initGit,
       setInitialized,

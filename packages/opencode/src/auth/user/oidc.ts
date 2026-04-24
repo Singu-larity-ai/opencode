@@ -15,55 +15,65 @@ export type OIDCUserInfo = {
   picture?: string
 }
 
-function issuer() {
-  const val = Flag.OPENCODE_AUTHING_ISSUER
-  if (!val) throw new Error("OPENCODE_AUTHING_ISSUER is not configured")
+function endpoint() {
+  const val = Flag.OPENCODE_CASDOOR_ENDPOINT
+  if (!val) throw new Error("OPENCODE_CASDOOR_ENDPOINT is not configured")
+  return val.replace(/\/+$/, "")
+}
+
+function clientId() {
+  const val = Flag.OPENCODE_CASDOOR_CLIENT_ID
+  if (!val) throw new Error("OPENCODE_CASDOOR_CLIENT_ID is not configured")
   return val
 }
 
-function appId() {
-  const val = Flag.OPENCODE_AUTHING_APP_ID
-  if (!val) throw new Error("OPENCODE_AUTHING_APP_ID is not configured")
+function clientSecret() {
+  const val = Flag.OPENCODE_CASDOOR_CLIENT_SECRET
+  if (!val) throw new Error("OPENCODE_CASDOOR_CLIENT_SECRET is not configured")
   return val
 }
 
-function appSecret() {
-  const val = Flag.OPENCODE_AUTHING_APP_SECRET
-  if (!val) throw new Error("OPENCODE_AUTHING_APP_SECRET is not configured")
-  return val
+function organization() {
+  return Flag.OPENCODE_CASDOOR_ORGANIZATION || "built-in"
 }
 
 export function isConfigured() {
-  return !!(Flag.OPENCODE_AUTHING_APP_ID && Flag.OPENCODE_AUTHING_APP_SECRET && Flag.OPENCODE_AUTHING_ISSUER)
+  return !!(
+    Flag.OPENCODE_CASDOOR_ENDPOINT &&
+    Flag.OPENCODE_CASDOOR_CLIENT_ID &&
+    Flag.OPENCODE_CASDOOR_CLIENT_SECRET
+  )
 }
 
 export function authorizeUrl(params: { redirectUri: string; state: string }) {
-  const url = new URL(`${issuer()}/auth`)
-  url.searchParams.set("client_id", appId())
+  const url = new URL(`${endpoint()}/login/oauth/authorize`)
+  url.searchParams.set("client_id", clientId())
   url.searchParams.set("redirect_uri", params.redirectUri)
   url.searchParams.set("response_type", "code")
   url.searchParams.set("scope", "openid profile email")
   url.searchParams.set("state", params.state)
+  url.searchParams.set("organization", organization())
   return url.toString()
 }
 
 export function logoutUrl(params: { redirectUri: string }) {
-  const url = new URL(`${issuer()}/session/end`)
-  url.searchParams.set("client_id", appId())
-  url.searchParams.set("post_logout_redirect_uri", params.redirectUri)
+  const url = new URL(`${endpoint()}/login/oauth/logout`)
+  url.searchParams.set("client_id", clientId())
+  url.searchParams.set("redirect_uri", params.redirectUri)
+  url.searchParams.set("scope", "openid")
   return url.toString()
 }
 
 export async function exchangeCode(params: { code: string; redirectUri: string }): Promise<OIDCTokens> {
-  const res = await fetch(`${issuer()}/token`, {
+  const res = await fetch(`${endpoint()}/api/login/oauth/access_token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code: params.code,
       redirect_uri: params.redirectUri,
-      client_id: appId(),
-      client_secret: appSecret(),
+      client_id: clientId(),
+      client_secret: clientSecret(),
     }),
   })
   if (!res.ok) {
@@ -76,15 +86,16 @@ export async function exchangeCode(params: { code: string; redirectUri: string }
 let jwksCache: ReturnType<typeof createRemoteJWKSet> | undefined
 function jwks() {
   if (!jwksCache) {
-    jwksCache = createRemoteJWKSet(new URL(`${issuer()}/.well-known/jwks.json`))
+    jwksCache = createRemoteJWKSet(new URL(`${endpoint()}/.well-known/jwks`))
   }
   return jwksCache
 }
 
 export async function verifyIdToken(idToken: string): Promise<OIDCUserInfo> {
   const { payload } = await jwtVerify(idToken, jwks(), {
-    issuer: issuer(),
-    audience: appId(),
+    issuer: endpoint(),
+    audience: clientId(),
+    clockTolerance: 60,
   })
   return {
     sub: payload.sub!,
@@ -95,7 +106,7 @@ export async function verifyIdToken(idToken: string): Promise<OIDCUserInfo> {
 }
 
 export async function fetchUserInfo(accessToken: string): Promise<OIDCUserInfo> {
-  const res = await fetch(`${issuer()}/me`, {
+  const res = await fetch(`${endpoint()}/api/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (!res.ok) {
