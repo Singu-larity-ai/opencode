@@ -2,6 +2,7 @@ import { createContext, useContext, on, createEffect, type ParentProps } from "s
 import { createResource, Show, onMount } from "solid-js"
 import { usePlatform } from "./platform"
 import { removePersisted } from "@/utils/persist"
+import { useGlobalSDK } from "./global-sdk"
 
 export type AuthUser = {
   id: string
@@ -46,17 +47,18 @@ function clearGlobalCaches() {
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
     if (!key) continue
-    if (key.startsWith("opencode.") && (key.includes("globalSync") || key.includes("project"))) {
+    if (key.startsWith("opencode.") || key.startsWith("default.")) {
       keysToRemove.push(key)
     }
   }
   for (const key of keysToRemove) {
     localStorage.removeItem(key)
   }
-  console.log("[auth] Cleared global caches after user change")
+  console.log("[auth] Cleared all caches after user change:", keysToRemove.length, "keys removed")
 }
 
 export function AuthProvider(props: ParentProps) {
+  const globalSDK = useGlobalSDK()
   const [authData, { refetch }] = createResource(fetchUser, {
     initialValue: { authenticated: false },
   })
@@ -78,6 +80,7 @@ export function AuthProvider(props: ParentProps) {
   })
 
   const logout = () => {
+    globalSDK.event.stop()
     clearGlobalCaches()
     localStorage.removeItem("opencode.auth.userId")
     window.location.replace("/auth/logout")
